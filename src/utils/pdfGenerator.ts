@@ -19,8 +19,25 @@ interface BulletinData {
     };
 }
 
+// Fonction pour convertir une image en base64
+const getImageBase64 = async (imagePath: string): Promise<string> => {
+    try {
+        const response = await fetch(imagePath);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement de l\'image:', error);
+        return '';
+    }
+};
+
 const imagesAssets = {
-    logoRDC: '/images/rdc_flag.png',
+    logoRDC: '/images/drc_flag.png',
     logoESURSI: '/images/min_logo.png',
     filigrane: '/images/background.jpg'
 }
@@ -39,11 +56,22 @@ const getCellStyleForAverage = (moyenne: number, text: string, alignment: 'left'
     return cellStyle(text, alignment, color);
 };
 
-export const generateBulletinsPDF = (data: BulletinData) => { 
+export const generateBulletinsPDF = async (data: BulletinData) => {
+    // Charger les images en base64
+    const logoRDCBase64 = await getImageBase64(imagesAssets.logoRDC);
+    const logoESURSIBase64 = await getImageBase64(imagesAssets.logoESURSI);
+    const filigraneBase64 = await getImageBase64(imagesAssets.filigrane); 
     const docDefinition: any = {
         pageSize: 'A4',
         pageMargins: [40, 60, 40, 60] as [number, number, number, number],
         content: [],
+        // Ajouter l'image de fond (filigrane) si disponible
+        background: filigraneBase64 ? {
+            image: filigraneBase64,
+            width: 595.28, // Largeur A4 en points
+            height: 841.89, // Hauteur A4 en points
+            absolutePosition: { x: 0, y: 0 },
+        } : undefined,
         styles: {
             header: { fontSize: 10, bold: true, alignment: 'center', margin: [0, 0, 0, 10] },
             subheader: { fontSize: 10, bold: true, margin: [0, 5, 0, 3] },
@@ -209,14 +237,40 @@ export const generateBulletinsPDF = (data: BulletinData) => {
             widths: [55, '*', 55], 
             body: [
               [
-                // 3 colonnes seulement, pour aligner les logos et le texte central
-                "Logo RDC",
+                // Logo RDC
+                logoRDCBase64 ? {
+                  image: logoRDCBase64,
+                  width: 50,
+                  height: 50,
+                  alignment: 'center',
+                  margin: [0, 5, 0, 0],
+                  border: [true, true, false, true]
+                } : { 
+                  text: "", 
+                  alignment: 'center', 
+                  style: 'small' 
+                },
+                // Texte central
                 {
                   text: "République Démocratique du Congo\nMinistère de l'Enseignement Supérieur, Universitaire, Recherche Scientique et Innovations\nInstitut Supérieur de Techniques Appliquées de Gombe-Matadi\n\"I.S.T.A/GM à Mbanza-Ngungu\"",
                   alignment: "center",
-                  style: 'small'
+                  style: 'small',
+                  border: [false, true, false, true]
                 },
-                "Logo ESURSI"
+                // Logo ESURSI
+                logoESURSIBase64 ? {
+                  image: logoESURSIBase64,
+                  width: 50,
+                  height: 50,
+                  alignment: 'center',
+                  margin: [0, 5, 0, 0],
+                  border: [false, true, true, true]
+                } : { 
+                  text: "", 
+                  alignment: 'center', 
+                  style: 'small',
+                  border: [false, true, true, true] 
+                }
               ]
             ]
           },

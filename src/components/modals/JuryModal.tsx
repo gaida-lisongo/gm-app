@@ -57,7 +57,7 @@ export default function JuryModal({ isOpen, onClose, unites, jurys, promotionNam
     etudiant.matricule.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleGenerateBulletins = () => {
+  const handleGenerateBulletins = async () => {
     if (!selectedJury || etudiants.length === 0) {
       alert('Aucun étudiant disponible pour générer les bulletins.');
       return;
@@ -78,7 +78,7 @@ export default function JuryModal({ isOpen, onClose, unites, jurys, promotionNam
     };
 
     try {
-      const pdfDoc = generateBulletinsPDF(bulletinData);
+      const pdfDoc = await generateBulletinsPDF(bulletinData);
       pdfDoc.download(`Bulletins_${selectedJury.designation}_${selectedJury.annee_acad}.pdf`);
     } catch (error) {
       console.error('Erreur lors de la génération du PDF:', error);
