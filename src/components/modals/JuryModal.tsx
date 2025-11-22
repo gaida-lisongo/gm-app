@@ -3,6 +3,7 @@
 import { JuryType, InscritType, UniteType } from '@/models/Promotion';
 import { CloseIcon, UserIcon, ChevronLeftIcon, EyeIcon } from '@/icons';
 import { useState } from 'react';
+import { generateBulletinsPDF } from '@/utils/pdfGenerator';
 
 interface JuryModalProps {
   isOpen: boolean;
@@ -10,9 +11,12 @@ interface JuryModalProps {
   jurys: JuryType[];
   unites: UniteType[];
   promotionName: string;
+  mentionName: string;
+  systeme: string;
+  orientation: string;
 }
 
-export default function JuryModal({ isOpen, onClose, unites, jurys, promotionName }: JuryModalProps) {
+export default function JuryModal({ isOpen, onClose, unites, jurys, promotionName, mentionName, orientation, systeme }: JuryModalProps) {
   const [currentView, setCurrentView] = useState<'jurys' | 'etudiants'>('jurys');
   const [selectedJury, setSelectedJury] = useState<JuryType | null>(null);
   const [etudiants, setEtudiants] = useState<InscritType[]>([]);
@@ -52,6 +56,35 @@ export default function JuryModal({ isOpen, onClose, unites, jurys, promotionNam
     etudiant.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
     etudiant.matricule.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleGenerateBulletins = () => {
+    if (!selectedJury || etudiants.length === 0) {
+      alert('Aucun étudiant disponible pour générer les bulletins.');
+      return;
+    }
+
+    const bulletinData = {
+      etudiants: filteredEtudiants,
+      unites: unites,
+      promotionInfo: {
+        classe: promotionName,
+        anneeAcademique: selectedJury.annee_acad,
+        section: selectedJury.filiere,
+        systeme: systeme,
+        president: selectedJury.president,
+        orientation: selectedJury?.designation,
+        mention: mentionName // Extraire la mention du nom de la promotion
+      }
+    };
+
+    try {
+      const pdfDoc = generateBulletinsPDF(bulletinData);
+      pdfDoc.download(`Bulletins_${selectedJury.designation}_${selectedJury.annee_acad}.pdf`);
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      alert('Erreur lors de la génération des bulletins PDF.');
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -166,14 +199,12 @@ export default function JuryModal({ isOpen, onClose, unites, jurys, promotionNam
                 {filteredEtudiants.length} étudiant{filteredEtudiants.length > 1 ? 's' : ''}
               </div>
               <button
-                onClick={() => {
-                    console.log("Matieres : ", unites);
-                    console.log("Etudiants : ", etudiants);
-                }}
-                className="flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 transition-colors duration-200"
+                onClick={handleGenerateBulletins}
+                className="flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors duration-200"
+                disabled={filteredEtudiants.length === 0}
               >
                 <EyeIcon className="w-4 h-4 mr-2" />
-                Grille
+                Générer Bulletins PDF
               </button>
             </div>
 

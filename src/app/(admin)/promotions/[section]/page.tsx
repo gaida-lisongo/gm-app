@@ -33,6 +33,8 @@ export default function PromotionsPage() {
       }
       
       if (foundSection && foundMention) {
+        console.log('Section :', foundSection)
+        console.log('Mention :', foundMention)
         setCurrentSection({
           ...foundSection,
           mentionName: foundMention.designation
@@ -160,7 +162,11 @@ export default function PromotionsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {promotions.map((promotion) => (
-          <PromotionCard key={promotion.id} promotion={promotion} />
+          <PromotionCard 
+            key={promotion.id} 
+            promotion={promotion} 
+            mention={currentSection?.mentionName} 
+          />
         ))}
       </div>
     </div>

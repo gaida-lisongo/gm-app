@@ -8,9 +8,10 @@ import MatieresModal from '@/components/modals/MatieresModal';
 
 interface PromotionCardProps {
   promotion: PromotionType;
+  mention: string
 }
 
-export default function PromotionCard({ promotion }: PromotionCardProps) {
+export default function PromotionCard({ promotion, mention }: PromotionCardProps) {
   const [showJuryModal, setShowJuryModal] = useState(false);
   const [showMatieresModal, setShowMatieresModal] = useState(false);
 
@@ -102,6 +103,9 @@ export default function PromotionCard({ promotion }: PromotionCardProps) {
         jurys={promotion.jurys || []}
         unites={promotion.unites || []}
         promotionName={promotion.classe}
+        mentionName={mention}
+        systeme={promotion?.systeme}
+        orientation={promotion?.orientation ?? ''}
       />
       
       <MatieresModal

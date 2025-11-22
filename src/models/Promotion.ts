@@ -73,15 +73,15 @@ export interface NoteType {
     id_etudiant: number;
     id_matiere: number;
     cours: string;
-    credit: string;
+    credit: number;
     id_unite: number;
     semestre: string;
     id_annee: number;
-    tp: number;
-    td: number;
-    cmi: number;
-    examen: number;
-    rattarapage: number
+    tp: string;
+    td: string;
+    cmi: string;
+    examen: string;
+    rattrapage: number
 }
 
 class Promotion {
