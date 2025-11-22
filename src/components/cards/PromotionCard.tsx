@@ -100,6 +100,7 @@ export default function PromotionCard({ promotion }: PromotionCardProps) {
         isOpen={showJuryModal}
         onClose={() => setShowJuryModal(false)}
         jurys={promotion.jurys || []}
+        unites={promotion.unites || []}
         promotionName={promotion.classe}
       />
       

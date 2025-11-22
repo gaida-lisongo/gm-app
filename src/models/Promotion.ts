@@ -45,6 +45,45 @@ export interface JuryType {
     membre: string
 }
 
+export interface InscritType {
+    id: number;
+    id_etudiant: number;
+    section: string;
+    option: string;
+    annee: string;
+    pourcentage_exetat: string;
+    nom: string;
+    post_nom: string;
+    prenom: string;
+    matricule: string;
+    sexe: string;
+    telephone: string;
+    adresse: string;
+    email: string;
+    lieu_naissance: string;
+    date_naissance: string;
+    annee_acad: string;
+    id_annee_acad: number;
+    id_promotion: number,
+    notes?: NoteType[] | []
+}
+
+export interface NoteType {
+    id: number;
+    id_etudiant: number;
+    id_matiere: number;
+    cours: string;
+    credit: string;
+    id_unite: number;
+    semestre: string;
+    id_annee: number;
+    tp: number;
+    td: number;
+    cmi: number;
+    examen: number;
+    rattarapage: number
+}
+
 class Promotion {
     async all(sectionId: number) : Promise<PromotionType[]> {
         const result = await executeQuery(
@@ -92,6 +131,38 @@ class Promotion {
             [promotionId]
         );
         return result as JuryType[];
+    }
+
+    async inscrits(promotionId: number, anneeId: number): Promise<InscritType[]>{
+        const result = await executeQuery(
+            `SELECT ae.*, e.nom, e.post_nom, e.prenom, e.matricule, e.sexe, e.telephone, e.adresse, e.e_mail, e.lieu_naissance, e.date_naiss, CONCAT(a.debut, ' ', a.fin) as 'annee_acad', pe.id_annee_acad, pe.id_promotion
+            FROM promotion_etudiant pe
+            INNER JOIN administratif_etudiant ae ON ae.id = pe.id_adminEtudiant
+            INNER JOIN etudiant e ON e.id = ae.id_etudiant
+            INNER JOIN annee a ON a.id = pe.id_annee_acad
+            WHERE pe.id_promotion = ? AND pe.id_annee_acad = ?`,
+            [promotionId, anneeId]
+        );
+
+        return result as InscritType[]
+    }
+
+    async notes(etudiantId: number, anneeId: number): Promise<NoteType[]>{
+        const result = await executeQuery(
+            `SELECT 
+                f.*, 
+                m.designation AS cours, 
+                m.credit, 
+                m.id_unite,
+                m.semestre,
+                (f.tp + f.td) AS cmi
+            FROM fiche_cotation f
+            INNER JOIN matiere m ON m.id = f.id_matiere
+            WHERE  f.id_etudiant = ? AND  f.id_annee = ?`,
+            [etudiantId, anneeId]
+        );
+
+        return result as NoteType[]
     }
 }
 
