@@ -67,7 +67,7 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
     const sceauBase64 = await getImageBase64(imagesAssets.sceau);
     const docDefinition: any = {
         pageSize: 'A4',
-        pageMargins: [40, 60, 40, 60] as [number, number, number, number],
+        pageMargins: [40, 60, 50, 60] as [number, number, number, number],
         content: [],
         // Ajouter l'image de fond (filigrane) si disponible
         background: filigraneBase64 ? {
@@ -324,7 +324,7 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
           },  
           margin: [0, 0, 0, 0]
         });
-
+ 
         docDefinition.content.push({
           table: {
             widths: ['50%', '50%'],
@@ -332,8 +332,8 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
               [
                 {
                   stack: [
-                    `MENTION : ${data?.promotionInfo.mention}`,
-                    `SECTION : ${data?.promotionInfo.section}`,                    
+                    `SECTION : ${data?.promotionInfo.mention}`,
+                    `MENTION : ${data?.promotionInfo.section}`,                    
                     `PROMOTION : ${data?.promotionInfo.classe}`,
                     `DECISION DU JURY : ${totalCredit ? (ncv * 100 / totalCredit >= 75 ? 'ADMIS' : 'NON ADMIS') : 'NON ADMIS'}`,
                   ],
@@ -470,40 +470,6 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                     bold: true,
                 },
                 cellStyle(mentionJurry(maxNote ? ((totalNote / maxNote) * 100) : 0), 'center'),
-            ],
-            [
-              {
-                text: `Sceau de la section`,
-                // 💡 CORRECTION : rowSpan: 6 (pour 6 lignes de synthèse)
-                style: { fontSize: 10, alignment: 'center' },
-                border: [false, false, false, false],
-                margin: [0, 10, 0, 0]
-              },
-              {
-                text: `Fait à Mbanza - Ngungu, le ${new Date().toLocaleDateString()}`,
-                // 💡 CORRECTION : rowSpan: 6 (pour 6 lignes de synthèse)
-                colSpan: 2,
-                style: { fontSize: 10, alignment: 'right' },
-                border: [false, false, false, false]
-              },
-            ],
-            [
-              {
-                text: `Le Secrétaire Général Académique\n\n`,
-                style: { fontSize: 10, alignment: 'right' },
-                border: [false, false, false, false],
-                colSpan: 3,
-                margin: [0, 8, 15, 0]
-              },
-            ],
-            [
-              {
-                text: `\n\n\n\LISONGO SEMETE Gabriel\n\n     Chef de Travaux\n\n`,
-                style: { fontSize: 10, alignment: 'right' },
-                border: [false, false, false, false],
-                colSpan: 3,
-                margin: [0, 8, 15, 0]
-              },
             ]
         ];
 
@@ -513,6 +479,68 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                 body: syntheseRow 
             },
             margin: [0, 5, 0, 0]
+        });
+
+        // Section sceau et signature côte à côte
+        docDefinition.content.push({
+            columns: [
+                {
+                    width: '40%',
+                    stack: [
+                        // sceauBase64 ? {
+                        //     image: sceauBase64,
+                        //     width: 120,
+                        //     height: 125,
+                        //     alignment: 'center',
+                        //     margin: [0, 10, 0, 5]
+                        // } : {
+                        //     text: 'Sceau de la section',
+                        //     style: { fontSize: 9, alignment: 'center' },
+                        //     margin: [0, 10, 0, 5]
+                        // },
+                        {
+                            text: 'Certifié exact et conforme d\'après les registres des délibérations du jury',
+                            style: { fontSize: 8, alignment: 'center' },
+                            margin: [0, 0, 0, 0]
+                        }
+                    ]
+                },
+                {
+                    width: '60%',
+                    stack: [
+                        {
+                            text: `Fait à Mbanza-Ngungu, le ___/___/20__`,
+                            style: { fontSize: 10, alignment: 'right' },
+                            margin: [0, 0, 0, 3]
+                        },
+                        {
+                            text: 'Le Secrétaire Général Académique',
+                            style: { fontSize: 10, alignment: 'center' },
+                            margin: [30, 1, 0, 1]
+                        },
+                        // signatureBase64 ? {
+                        //     image: signatureBase64,
+                        //     width: 100,
+                        //     height: 100,
+                        //     alignment: 'center',
+                        //     margin: [30, 1, 20, 1]
+                        // } : {
+                        //     text: '',
+                        //     margin: [0, 25, 0, 5]
+                        // },
+                        {
+                            text: '',
+                            margin: [0, 100, 0, 5]
+                        },
+                        {
+                            text: 'LISONGO SEMETE Gabriel\nChef de Travaux',
+                            style: { fontSize: 10, alignment: 'center' },
+                            margin: [30, 10, 0, 0]
+                        }
+                    ]
+                }
+            ],
+            margin: [0, 15, 0, 0]
         });
 
     });
