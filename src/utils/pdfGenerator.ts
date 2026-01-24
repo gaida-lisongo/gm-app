@@ -39,7 +39,9 @@ const getImageBase64 = async (imagePath: string): Promise<string> => {
 const imagesAssets = {
     logoRDC: '/images/drc_flag.png',
     logoESURSI: '/images/min_logo.png',
-    filigrane: '/images/background.jpg'
+    filigrane: '/images/background.jpg',
+    signature: '/images/sgacad.png',
+    sceau: '/images/sceau.png',
 }
 
 // Fonction utilitaire pour le style des cellules de notes
@@ -61,6 +63,8 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
     const logoRDCBase64 = await getImageBase64(imagesAssets.logoRDC);
     const logoESURSIBase64 = await getImageBase64(imagesAssets.logoESURSI);
     const filigraneBase64 = await getImageBase64(imagesAssets.filigrane); 
+    const signatureBase64 = await getImageBase64(imagesAssets.signature);
+    const sceauBase64 = await getImageBase64(imagesAssets.sceau);
     const docDefinition: any = {
         pageSize: 'A4',
         pageMargins: [40, 60, 40, 60] as [number, number, number, number],
@@ -157,83 +161,58 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
         // Filtrer les unités qui ont des matières
         const unitesAvecMatieres = data.unites.filter(u => u.matieres && u.matieres.length > 0);
         
-        const notesTableBody = unitesAvecMatieres.flatMap(u => {
+        const notesTableBody = unitesAvecMatieres.map(u => {
             // Filtrer les matières qui ont un crédit valide (non null et > 0)
             const matieresAvecCredit = u.matieres?.filter(m => {
                 const credit = parseFloat(m?.credit ?? '0');
-
                 return credit > 0; // Exclure les matières avec crédit null, undefined ou 0
             }) || [];
 
             // Si l'unité n'a plus de matières valides après filtrage, l'exclure complètement
             if (matieresAvecCredit.length === 0) {
-                return []; // Retourner un tableau vide pour cette unité
+                return null; // Retourner null pour cette unité
             }
 
-            const notes = matieresAvecCredit.map(m => {
+            // Calculer les totaux pour cette UE
+            let creditsUE = 0;
+            let totUE = 0;
+
+            matieresAvecCredit.forEach(m => {
                 const credit = parseFloat(m?.credit ?? '0');
+                creditsUE += credit;
                 totalCredit += credit;
                 maxNote += 20 * credit;
                 const noteSession = etudiant?.notes?.find(n => n.id_matiere === m.id);
                 
                 // Calculs de base
-                const cmi = parseFloat(noteSession?.cmi ?? '0');
-                const exam = parseFloat(noteSession?.examen ?? '0');
-                const rattrapage = noteSession?.rattrapage ?? 0;
-                
                 const totalSession = (noteSession?.cmi && noteSession?.examen) ? parseFloat(noteSession?.cmi ?? '0') + parseFloat(noteSession?.examen ?? '0') : 0;
-                const totalRattrapage = noteSession?.rattrapage ?? 0; // Exemple de calcul, ajustez si nécessaire
-
-                // Détermination du total.P (la meilleure note entre Session et Rattrapage, multipliée par le crédit)
-                const noteFinale = (noteSession?.rattrapage ?? 0) > totalSession ? (noteSession?.rattrapage ?? 0) : totalSession;
-                ncv += noteFinale >= 10 ? (noteSession?.credit ?? 0) : 0;
                 
-                const totalP = noteFinale * (noteSession?.credit ?? 0);
+                // Détermination de la note finale (la meilleure note entre Session et Rattrapage)
+                const noteFinale = (noteSession?.rattrapage ?? 0) > totalSession ? (noteSession?.rattrapage ?? 0) : totalSession;
+                ncv += noteFinale >= 10 ? credit : 0;
+                
+                const totalP = noteFinale * credit;
+                totUE += totalP;
                 totalNote += totalP;
+            });
 
-                return [
-                    // Colonne 1: Matière
-                    cellStyle(m?.designation ?? 'N/A', 'left'), 
-                    // Colonne 2: CMI (Session)
-                    cellStyle((noteSession?.cmi) ? parseFloat(noteSession?.cmi).toFixed(2) : 'X'), 
-                    // Colonne 3: EXA (Session)
-                    cellStyle((noteSession?.examen) ? parseFloat(noteSession?.examen).toFixed(2) : 'X'),
-                    // Colonne 4: TOT.S (Session Total)
-                    cellStyle((noteSession?.cmi && noteSession?.examen) ? (parseFloat(noteSession?.cmi ?? '0') + parseFloat(noteSession?.examen ?? '0')).toFixed(2) : 'X'), 
-                    // Colonne 5: EXA (Rattrapage)
-                    cellStyle((noteSession?.rattrapage) ? noteSession?.rattrapage.toFixed(2) : 'X'), 
-                    // Colonne 6: TOT.R (Rattrapage Total)
-                    cellStyle((noteSession?.rattrapage) ? noteSession?.rattrapage.toFixed(2) : 'X'), 
-                    // Colonne 7: CRD
-                    cellStyle(credit ?? ''), 
-                    // Colonne 8: TOTAL.P
-                    cellStyle(totalP.toFixed(2)),
-                ];
-            })
-            // Ligne de synthèse de l'UE (Unité d'Enseignement)
-            const creditsUE = notes.reduce((acc, n) => acc + (Number(n[6].text) || 0), 0);
-            const totUE = notes.reduce((acc, n) => acc + (Number(n[7].text) || 0), 0);
-            // La moyenne ici semble être TOT.P / Crédits
+            // Calcul de la moyenne de l'UE
             const moyenneUE = creditsUE > 0 ? totUE / creditsUE : 0;
 
-            const ueRow = [
-                // Colonne 1: Designation de l'UE (colSpan: 6)
+            // Ligne de synthèse de l'UE (Unité d'Enseignement)
+            return [
+                // Colonne 1: Designation de l'UE
                 {
                     text: u.designation,
-                    colSpan: 6,
                     alignment: 'left',
                     bold: true,
-                    fillColor: '#f5f5f5' 
                 },
-                {}, {}, {}, {}, {}, // Placeholders
-                // Colonne 7: Total Crédits UE
+                // Colonne 2: Total Crédits UE
                 cellStyle(creditsUE, 'center'),
-                // Colonne 8: Moyenne/Total Point UE avec coloration
+                // Colonne 3: Moyenne UE avec coloration
                 getCellStyleForAverage(moyenneUE, `${moyenneUE.toFixed(2)}/20`, 'center')
             ];
-
-            return [...notes, ueRow];
-        });
+        }).filter(row => row !== null); // Filtrer les unités exclues
         
         // En-tête du bulletin
         // 1. En-tête institutionnel (Utilise la structure la plus stable)
@@ -335,7 +314,7 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
               ],              
               [
                 {
-                  text: `Bulltin Annuel ${data.promotionInfo.anneeAcademique}`,
+                  text: `RELEVE DES COTES ${data.promotionInfo.anneeAcademique}`,
                   style: 'studentInfo',
                   alignment: 'center',
                   colSpan: 2
@@ -380,7 +359,7 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                   border: [true, false, false, false]
                 },
                 {
-                  text: `JURY : ${data?.promotionInfo.orientation}`,
+                  text: `LICENCE`,
                   style: 'small',
                   alignment: 'right',
                   border: [false, false, true, false]
@@ -391,90 +370,31 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
           margin: [0, 0, 0, 0]
         });
 
-        // Header des notes CORRIGÉ
+        // Header des notes simplifié
         docDefinition.content.push({
             table: {
-              // 8 colonnes// Tentons la première approche : widths proportionnelles (*) (plus stable)
-              widths: ['40%', '8%', '8%', '8%', '8%', '8%', '10%', '10%'], 
+              // 3 colonnes seulement
+              widths: ['60%', '20%', '20%'], 
               body: [
-                // LIGNE 1 (Total de 5 entrées définissant 8 colonnes)
                 [
                   { 
-                    text: 'MATIERES', 
-                    style: 'small',
+                    text: 'UNITE D\'ENSEIGNEMENT', 
+                    style: 'tableHeader',
                     alignment: 'center',
-                    rowSpan: 3,
                     bold: true
                   },
                   { 
-                    text: 'SESSION', 
-                    style: 'small',
+                    text: 'CREDITS', 
+                    style: 'tableHeader',
                     alignment: 'center',
-                    colSpan: 3,
-                    bold: true
-                  },
-                  {}, // Placeholder pour Session (automatiquement ignoré, mais gardé par convention)
-                  {}, // Placeholder pour Session
-                  { 
-                    text: 'RATTRAPAGE', 
-                    style: 'small',
-                    alignment: 'center',
-                    colSpan: 2,
-                    bold: true
-                  },
-                  {}, // Placeholder pour Rattrapage
-                  { 
-                    text: 'CRD', 
-                    style: 'small',
-                    alignment: 'center',
-                    rowSpan: 3,
                     bold: true
                   },
                   { 
-                    text: 'TOT.P', 
-                    style: 'small',
+                    text: 'MOYENNE', 
+                    style: 'tableHeader',
                     alignment: 'center',
-                    rowSpan: 3,
                     bold: true
                   }
-                ],
-                // LIGNE 2 (DOIT contenir UNIQUEMENT les 6 cellules qui ne sont pas couvertes par un rowSpan)
-                [
-                  '', // 1. Cellule vide pour rowSpan de 'Matière' (OK)
-                  { 
-                    text: 'CMI', 
-                    style: 'small',
-                    alignment: 'center',
-                  }, // 2. Sous-colonne de 'Session'
-                  { 
-                    text: 'EXA', 
-                    style: 'small',
-                    alignment: 'center',
-                  }, // 3. Sous-colonne de 'Session'
-                  { 
-                    text: 'TOT', 
-                    style: 'small',
-                    alignment: 'center',
-                  }, // 4. Sous-colonne de 'Session'
-                  { 
-                    text: 'EXA', 
-                    style: 'small',
-                    alignment: 'center',
-                  }, // 5. Sous-colonne de 'Rattrapage'
-                  {
-                    text: 'TOT', 
-                    style: 'small',
-                    alignment: 'center',
-                  }, // 6. Sous-colonne de 'Rattrapage'
-                  // ❌ Les cellules pour 'CRD' et 'TOTAL.P' sont maintenant ABSENTES.
-                ],
-                [
-                  '',
-                  { text: '10', style: 'small' },
-                  { text: '10', style: 'small' },
-                  { text: '20', style: 'small' },
-                  { text: '20', style: 'small' },
-                  { text: '20', style: 'small' },
                 ]
               ]
             },
@@ -485,8 +405,8 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
 
         docDefinition.content.push({
           table: {
-              // 8 colonnes (doivent correspondre au header)
-              widths: ['40%', '8%', '8%', '8%', '8%', '8%', '10%', '10%'], 
+              // 3 colonnes (doivent correspondre au header)
+              widths: ['60%', '20%', '20%'], 
               body: notesTableBody
           }
         });
@@ -569,16 +489,16 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
             ],
             [
               {
-                text: `Président du jury,`,
+                text: `Le Secrétaire Général Académique\n\n`,
                 style: { fontSize: 10, alignment: 'right' },
                 border: [false, false, false, false],
                 colSpan: 3,
-                margin: [0, 8, 45, 0]
+                margin: [0, 8, 15, 0]
               },
             ],
             [
               {
-                text: `${data?.promotionInfo?.president}`,
+                text: `\n\n\n\LISONGO SEMETE Gabriel\n\n     Chef de Travaux\n\n`,
                 style: { fontSize: 10, alignment: 'right' },
                 border: [false, false, false, false],
                 colSpan: 3,
