@@ -128,6 +128,11 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
             docDefinition.content.push({ text: '', pageBreak: 'before' });
         }
 
+        // Générer un N/ref unique de 14 caractères basé sur la timestamp
+        const timestamp = Date.now().toString();
+        const nRef = ((parseInt(timestamp) * etudiant?.id)).toString().slice(-14).padStart(14, '0'); // Prendre les 14 derniers digits
+        const nRefDigits = (nRef).split(''); // Séparer chaque digit
+
         let ncv = 0;
         let totalCredit = 0;
         let totalNote = 0;
@@ -155,8 +160,8 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
         const notesTableBody = unitesAvecMatieres.flatMap(u => {
             // Filtrer les matières qui ont un crédit valide (non null et > 0)
             const matieresAvecCredit = u.matieres?.filter(m => {
-                const noteSession = etudiant?.notes?.find(n => n.id_matiere === m.id);
-                const credit = noteSession?.credit ?? 0;
+                const credit = parseFloat(m?.credit ?? '0');
+
                 return credit > 0; // Exclure les matières avec crédit null, undefined ou 0
             }) || [];
 
@@ -166,6 +171,9 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
             }
 
             const notes = matieresAvecCredit.map(m => {
+                const credit = parseFloat(m?.credit ?? '0');
+                totalCredit += credit;
+                maxNote += 20 * credit;
                 const noteSession = etudiant?.notes?.find(n => n.id_matiere === m.id);
                 
                 // Calculs de base
@@ -173,14 +181,13 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                 const exam = parseFloat(noteSession?.examen ?? '0');
                 const rattrapage = noteSession?.rattrapage ?? 0;
                 
-                const totalSession = parseFloat(noteSession?.cmi ?? '0') + parseFloat(noteSession?.examen ?? '0');
+                const totalSession = (noteSession?.cmi && noteSession?.examen) ? parseFloat(noteSession?.cmi ?? '0') + parseFloat(noteSession?.examen ?? '0') : 0;
                 const totalRattrapage = noteSession?.rattrapage ?? 0; // Exemple de calcul, ajustez si nécessaire
 
                 // Détermination du total.P (la meilleure note entre Session et Rattrapage, multipliée par le crédit)
                 const noteFinale = (noteSession?.rattrapage ?? 0) > totalSession ? (noteSession?.rattrapage ?? 0) : totalSession;
                 ncv += noteFinale >= 10 ? (noteSession?.credit ?? 0) : 0;
-                totalCredit += noteSession?.credit ?? 0;
-                maxNote += 20 * (noteSession?.credit ?? 0);
+                
                 const totalP = noteFinale * (noteSession?.credit ?? 0);
                 totalNote += totalP;
 
@@ -188,22 +195,21 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                     // Colonne 1: Matière
                     cellStyle(m?.designation ?? 'N/A', 'left'), 
                     // Colonne 2: CMI (Session)
-                    cellStyle(cmi.toFixed(2)), 
+                    cellStyle((noteSession?.cmi) ? parseFloat(noteSession?.cmi).toFixed(2) : 'X'), 
                     // Colonne 3: EXA (Session)
-                    cellStyle(exam.toFixed(2)),
+                    cellStyle((noteSession?.examen) ? parseFloat(noteSession?.examen).toFixed(2) : 'X'),
                     // Colonne 4: TOT.S (Session Total)
-                    cellStyle(totalSession.toFixed(2)), 
+                    cellStyle((noteSession?.cmi && noteSession?.examen) ? (parseFloat(noteSession?.cmi ?? '0') + parseFloat(noteSession?.examen ?? '0')).toFixed(2) : 'X'), 
                     // Colonne 5: EXA (Rattrapage)
-                    cellStyle(rattrapage.toFixed(2)), 
+                    cellStyle((noteSession?.rattrapage) ? noteSession?.rattrapage.toFixed(2) : 'X'), 
                     // Colonne 6: TOT.R (Rattrapage Total)
-                    cellStyle(totalRattrapage.toFixed(2)), 
+                    cellStyle((noteSession?.rattrapage) ? noteSession?.rattrapage.toFixed(2) : 'X'), 
                     // Colonne 7: CRD
-                    cellStyle(noteSession?.credit ?? ''), 
+                    cellStyle(credit ?? ''), 
                     // Colonne 8: TOTAL.P
                     cellStyle(totalP.toFixed(2)),
                 ];
-            }).filter((n): n is any[] => !!n) || []; // Filtrer les notes non trouvées
-
+            })
             // Ligne de synthèse de l'UE (Unité d'Enseignement)
             const creditsUE = notes.reduce((acc, n) => acc + (Number(n[6].text) || 0), 0);
             const totUE = notes.reduce((acc, n) => acc + (Number(n[7].text) || 0), 0);
@@ -302,26 +308,26 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                 {
                   border: [false, false, true, false],
                   table: {
-                    // 💡 SOLUTION : Définir les largeurs du sous-tableau (14 x 7.14% = 100% de la colonne parente)
+                    // Définir les largeurs du sous-tableau (14 x 7.14% = 100% de la colonne parente)
                     widths: widths14Cases, 
                     body: [
                       // Une seule ligne avec 14 cellules
                       [
-                        // Les 14 cellules. Utilisez des objets pour forcer les bordures individuelles.
-                        { text: '1', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '2', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '3', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '4', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '5', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '6', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '5', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '3', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '0', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '0', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '4', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '2', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '4', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
-                        { text: '2', border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        // Les 14 cellules avec les digits du N/ref généré
+                        { text: nRefDigits[0], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[1], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[2], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[3], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[4], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[5], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[6], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[7], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[8], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[9], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[10], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[11], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[12], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
+                        { text: nRefDigits[13], border: [true, true, true, true], margin: [0, 0, 0, 0], padding: [0, 0, 0, 0] },
                       ]
                     ]
                   },

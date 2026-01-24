@@ -53,9 +53,9 @@ export default function JuryModal({ isOpen, onClose, unites, jurys, promotionNam
   const filteredEtudiants = etudiants.filter(etudiant =>
     etudiant.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
     etudiant.post_nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    etudiant.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    etudiant?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     etudiant.matricule.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ).sort((a, b) => a.nom.localeCompare(b.nom));
 
   const handleGenerateBulletins = async () => {
     if (!selectedJury || etudiants.length === 0) {
