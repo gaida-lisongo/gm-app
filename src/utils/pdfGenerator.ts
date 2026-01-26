@@ -210,7 +210,7 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                 // Colonne 2: Total Crédits UE
                 cellStyle(creditsUE, 'center'),
                 // Colonne 3: Moyenne UE avec coloration
-                getCellStyleForAverage(moyenneUE, `${moyenneUE.toFixed(2)}/20`, 'center')
+                getCellStyleForAverage(moyenneUE, `${moyenneUE.toFixed(2)}`, 'center')
             ];
         }).filter(row => row !== null); // Filtrer les unités exclues
         
@@ -390,7 +390,7 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                     bold: true
                   },
                   { 
-                    text: 'MOYENNE', 
+                    text: 'MOYENNE/20', 
                     style: 'tableHeader',
                     alignment: 'center',
                     bold: true
