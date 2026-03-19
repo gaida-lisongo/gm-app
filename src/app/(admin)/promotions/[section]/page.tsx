@@ -33,6 +33,7 @@ export default function PromotionPage() {
   const searchParams = useSearchParams();
   const promotionId = params.section as string;
   const yearParam = searchParams.get("annee");
+  const hasSelectedYear = Boolean(yearParam);
 
   const [overview, setOverview] = useState<PromotionOverviewResponse | null>(null);
   const [details, setDetails] = useState<PromotionYearDetailsResponse | null>(null);
@@ -312,86 +313,88 @@ export default function PromotionPage() {
         </div>
       </section>
 
-      <section className="rounded-[24px] border border-gray-200 bg-white p-6 shadow-theme-xs">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Structure du programme
-            </h2>
-            <p className="text-sm text-gray-600">
-              Unites d enseignement chargees pour{" "}
-              {overview.selectedYearId
-                ? `l annee ${overview.years.find((year) => year.id === overview.selectedYearId)?.annee_acad ?? ""}`
-                : "cette promotion"}
-              .
+      {!hasSelectedYear && (
+        <section className="rounded-[24px] border border-gray-200 bg-white p-6 shadow-theme-xs">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Structure du programme
+              </h2>
+              <p className="text-sm text-gray-600">
+                Unites d enseignement chargees pour{" "}
+                {overview.selectedYearId
+                  ? `l annee ${overview.years.find((year) => year.id === overview.selectedYearId)?.annee_acad ?? ""}`
+                  : "cette promotion"}
+                .
+              </p>
+            </div>
+            {overview.selectedYearId && (
+              <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                Vue programme basee sur l annee selectionnee
+              </span>
+            )}
+          </div>
+
+          {overview.unites.length === 0 ? (
+            <p className="mt-5 text-sm text-gray-600">
+              Aucune unite d enseignement disponible pour cette promotion.
             </p>
-          </div>
-          {overview.selectedYearId && (
-            <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-              Vue programme basee sur l annee selectionnee
-            </span>
-          )}
-        </div>
+          ) : (
+            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {overview.unites.map((unite) => (
+                <div
+                  key={unite.id}
+                  className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {unite.designation}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Code: {unite.code}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700">
+                      {unite.matieres?.length || 0} matiere
+                      {(unite.matieres?.length || 0) > 1 ? "s" : ""}
+                    </span>
+                  </div>
 
-        {overview.unites.length === 0 ? (
-          <p className="mt-5 text-sm text-gray-600">
-            Aucune unite d enseignement disponible pour cette promotion.
-          </p>
-        ) : (
-          <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
-            {overview.unites.map((unite) => (
-              <div
-                key={unite.id}
-                className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {unite.designation}
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-600">
-                      Code: {unite.code}
+                  {unite.objectifs && (
+                    <p className="mt-4 text-sm leading-6 text-gray-600">
+                      <span className="font-semibold text-gray-900">Objectifs:</span>{" "}
+                      {unite.objectifs}
                     </p>
-                  </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700">
-                    {unite.matieres?.length || 0} matiere
-                    {(unite.matieres?.length || 0) > 1 ? "s" : ""}
-                  </span>
+                  )}
+
+                  {unite.competences && (
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      <span className="font-semibold text-gray-900">
+                        Competences:
+                      </span>{" "}
+                      {unite.competences}
+                    </p>
+                  )}
+
+                  {unite.matieres && unite.matieres.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {unite.matieres.map((matiere) => (
+                        <span
+                          key={matiere.id}
+                          className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700"
+                        >
+                          {matiere.designation} · {matiere.credit} cr
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                {unite.objectifs && (
-                  <p className="mt-4 text-sm leading-6 text-gray-600">
-                    <span className="font-semibold text-gray-900">Objectifs:</span>{" "}
-                    {unite.objectifs}
-                  </p>
-                )}
-
-                {unite.competences && (
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
-                    <span className="font-semibold text-gray-900">
-                      Competences:
-                    </span>{" "}
-                    {unite.competences}
-                  </p>
-                )}
-
-                {unite.matieres && unite.matieres.length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {unite.matieres.map((matiere) => (
-                      <span
-                        key={matiere.id}
-                        className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700"
-                      >
-                        {matiere.designation} · {matiere.credit} cr
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {yearParam && (
         <section className="space-y-6 rounded-[24px] border border-gray-200 bg-white p-6 shadow-theme-xs">

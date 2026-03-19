@@ -333,8 +333,7 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                 {
                   stack: [
                     `SECTION : ${data?.promotionInfo.mention}`,
-                    `MENTION : ${data?.promotionInfo.section}`,                    
-                    `PROMOTION : ${data?.promotionInfo.classe}`,
+                    `MENTION : ${data?.promotionInfo.section}`,        
                     `DECISION DU JURY : ${totalCredit ? (ncv * 100 / totalCredit >= 75 ? 'ADMIS' : 'NON ADMIS') : 'NON ADMIS'}`,
                   ],
                   style: 'small',
@@ -342,9 +341,8 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                 },
                 {
                   stack: [
-                    `ETUDIANT : ${etudiant?.nom} ${etudiant?.post_nom} ${etudiant?.prenom ? etudiant?.prenom : ''}`,                    
-                    `SEXE : ${etudiant?.sexe}`, 
-                    `NE(E) A : ${etudiant?.lieu_naissance ? etudiant?.lieu_naissance : 'S/N'}, LE ${etudiant?.date_naissance ? etudiant?.date_naissance : 'S/N'}`,                    
+                    `ETUDIANT : ${etudiant?.nom} ${etudiant?.post_nom} ${etudiant?.prenom ? etudiant?.prenom : ''}`,                             
+                    `PROMOTION : ${data?.promotionInfo.classe}`,                  
                     `MATRICULE : ${etudiant?.matricule}`,
                   ],
                   style: 'small',

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import type { PromotionType } from "@/models/Promotion";
 
@@ -12,8 +12,10 @@ type PromotionCard = PromotionType & {
 };
 
 export default function HomePage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sectionFilter = searchParams.get("section");
+  const [searchTerm, setSearchTerm] = useState("");
   const [promotions, setPromotions] = useState<PromotionCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,18 +46,92 @@ export default function HomePage() {
     fetchPromotions();
   }, []);
 
+  const sections = useMemo(() => {
+    const uniqueSections = new Map<number, string>();
+
+    promotions.forEach((promotion) => {
+      if (!uniqueSections.has(promotion.id_section)) {
+        uniqueSections.set(
+          promotion.id_section,
+          promotion.section_name || `Section ${promotion.id_section}`
+        );
+      }
+    });
+
+    return Array.from(uniqueSections.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [promotions]);
+
   const filteredPromotions = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
     if (!sectionFilter) {
-      return promotions;
+      if (!normalizedSearch) {
+        return promotions;
+      }
+
+      return promotions.filter((promotion) =>
+        [
+          promotion.classe,
+          promotion.section_name,
+          promotion.mention_name,
+          promotion.orientation,
+          promotion.systeme,
+        ]
+          .filter(Boolean)
+          .some((value) => value!.toLowerCase().includes(normalizedSearch))
+      );
     }
 
     const sectionId = Number.parseInt(sectionFilter, 10);
     if (Number.isNaN(sectionId)) {
-      return promotions;
+      if (!normalizedSearch) {
+        return promotions;
+      }
+
+      return promotions.filter((promotion) =>
+        [
+          promotion.classe,
+          promotion.section_name,
+          promotion.mention_name,
+          promotion.orientation,
+          promotion.systeme,
+        ]
+          .filter(Boolean)
+          .some((value) => value!.toLowerCase().includes(normalizedSearch))
+      );
     }
 
-    return promotions.filter((promotion) => promotion.id_section === sectionId);
-  }, [promotions, sectionFilter]);
+    return promotions.filter((promotion) => {
+      if (promotion.id_section !== sectionId) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [
+        promotion.classe,
+        promotion.section_name,
+        promotion.mention_name,
+        promotion.orientation,
+        promotion.systeme,
+      ]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(normalizedSearch));
+    });
+  }, [promotions, searchTerm, sectionFilter]);
+
+  const handleSectionChange = (value: string) => {
+    if (!value) {
+      router.push("/");
+      return;
+    }
+
+    router.push(`/?section=${value}`);
+  };
 
   if (loading) {
     return (
@@ -116,19 +192,63 @@ export default function HomePage() {
               structure de programme.
             </p>
           </div>
-          {sectionFilter && (
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 rounded-[24px] border border-gray-200 bg-white p-5 shadow-theme-xs lg:grid-cols-[1fr_260px_auto] lg:items-end">
+          <div className="space-y-2">
+            <label
+              htmlFor="promotion-search"
+              className="text-sm font-medium text-gray-700"
             >
-              Retirer le filtre de section
-            </Link>
+              Rechercher une promotion
+            </label>
+            <input
+              id="promotion-search"
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Classe, mention, section, orientation..."
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="section-filter"
+              className="text-sm font-medium text-gray-700"
+            >
+              Filtrer par section
+            </label>
+            <select
+              id="section-filter"
+              value={sectionFilter || ""}
+              onChange={(event) => handleSectionChange(event.target.value)}
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none"
+            >
+              <option value="">Toutes les sections</option>
+              {sections.map((section) => (
+                <option key={section.id} value={section.id}>
+                  {section.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(sectionFilter || searchTerm.trim()) && (
+            <div className="flex justify-start lg:justify-end">
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Reinitialiser
+              </Link>
+            </div>
           )}
         </div>
 
         {filteredPromotions.length === 0 ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-600">
-            Aucune promotion trouvee pour ce filtre.
+            Aucune promotion trouvee pour ces criteres.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
