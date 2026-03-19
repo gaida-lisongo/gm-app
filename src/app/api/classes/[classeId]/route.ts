@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params } : { params : Promise<
         const promotions: PromotionType[] = [];
 
         for (const promotion of promotionsData) {
-            const unitesData = await Promotion.unites(promotion.id);
+            const unitesData = await Promotion.matieresByPromotion(promotion.id);
             const jurys = await Promotion.jurys(promotion.id);
 
             if(!unitesData || unitesData.length === 0){
@@ -30,19 +30,9 @@ export async function GET(request: NextRequest, { params } : { params : Promise<
                 });
 
             } else {
-                const unites: any = [];
-
-                for (const unite of unitesData) {
-                    const matieresData = await Promotion.matieres(unite.id);
-                    unites.push({
-                        ...unite,
-                        matieres: matieresData
-                    });
-                }
-
                 promotions.push({
                     ...promotion,
-                    unites: unites,
+                    unites: unitesData,
                     jurys
                 });
             }

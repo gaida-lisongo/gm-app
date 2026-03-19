@@ -14,20 +14,45 @@ export async function GET() {
         for(const mention of mentionsData) {
             if (!mention.id) continue; // Skip mentions without id
             
-            const sectionsData = await Mention.find(mention.id);
-            mentions.push({
-                id: mention.id,
-                designation: mention.designation,
-                id_agent: mention.id_agent,
-                date_creation: mention.date_creation,
-                description: mention.description,
-                sections: sectionsData || [],
-            });
+            try {
+                const sectionsData = await Mention.find(mention.id);
+                mentions.push({
+                    id: mention.id,
+                    designation: mention.designation,
+                    id_agent: mention.id_agent,
+                    date_creation: mention.date_creation,
+                    description: mention.description,
+                    sections: sectionsData || [],
+                });
+            } catch (sectionError) {
+                console.warn(`Impossible de charger les sections pour la mention ${mention.id}:`, sectionError);
+                // Continuer sans sections plutôt que d'échouer complètement
+                mentions.push({
+                    id: mention.id,
+                    designation: mention.designation,
+                    id_agent: mention.id_agent,
+                    date_creation: mention.date_creation,
+                    description: mention.description,
+                    sections: [],
+                });
+            }
         }
         return NextResponse.json(mentions);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Erreur lors de la récupération des mentions:', error);
-        return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+        
+        // Analyse du type d'erreur
+        if (error.code === 'ETIMEDOUT') {
+            return NextResponse.json(
+                { error: 'Timeout de base de données. Le serveur MySQL est injoignable.' }, 
+                { status: 503 }
+            );
+        }
+        
+        return NextResponse.json(
+            { error: 'Erreur serveur', details: error.message }, 
+            { status: 500 }
+        );
     }
 }
 
@@ -42,9 +67,20 @@ export async function POST(request: NextRequest) {
 
         const mention = await Mention.create(body);
         return NextResponse.json(mention, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Erreur lors de la création de la mention:', error);
-        return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+        
+        if (error.code === 'ETIMEDOUT') {
+            return NextResponse.json(
+                { error: 'Timeout de base de données' }, 
+                { status: 503 }
+            );
+        }
+        
+        return NextResponse.json(
+            { error: 'Erreur serveur', details: error.message }, 
+            { status: 500 }
+        );
     }
 }
 

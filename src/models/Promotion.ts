@@ -117,6 +117,60 @@ class Promotion {
         return result as MatiereType[];
     }
 
+    async matieresByPromotion(promotionId: number, anneeId: number = 8) {
+        try {
+            const req = await executeQuery(
+                `SELECT 
+                    unite.id AS 'unite', 
+                    unite.designation, 
+                    unite.code, 
+                    unite.id_promotion,
+                    unite.competences,
+                    unite.objectifs,
+                    matiere.id, 
+                    matiere.designation AS 'intitule', 
+                    matiere.credit, 
+                    charge_horaire.semestre, 
+                    charge_horaire.statut
+                FROM matiere
+                INNER JOIN unite ON unite.id = matiere.id_unite
+                INNER JOIN charge_horaire ON charge_horaire.id_matiere = matiere.id
+                WHERE unite.id_promotion =  ? AND charge_horaire.id_annee=?;
+                `,
+                [promotionId, anneeId]
+            );
+
+            const unitesData :any[] = [];
+            (req as RowDataPacket[]).forEach((row) => {
+                let unite = unitesData.find(u => u.id === row.unite);
+                if (!unite) {
+                    unite = {
+                        id: row.unite,
+                        designation: row.designation,
+                        code: row.code,
+                        id_promotion: row.id_promotion,
+                        competences: row.competences,
+                        objectifs: row.objectifs,
+                        matieres: []
+                    };
+                    unitesData.push(unite);
+                }
+                unite.matieres.push({
+                    id: row.id,
+                    intitule: row.intitule,
+                    credit: row.credit,
+                    semestre: row.semestre,
+                    statut: row.statut
+                });
+            });
+
+            return unitesData;
+        } catch (error) {
+            console.error('Erreur lors de la récupération des matières par promotion:', error);
+            return [];            
+        }
+    }
+
     async jurys(promotionId: number): Promise<JuryType[]> {
         const result = await executeQuery(`
             SELECT nj.*, CONCAT(a.debut, ' - ', a.fin) as 'annee_acad', s.designation as 'filiere', j.designation, CONCAT(pj.grade, ' ', pj.nom, ' ', pj.post_nom) as 'president', CONCAT(sj.grade, ' ', sj.nom, ' ', sj.post_nom) as 'secretaire', CONCAT(mj.grade, ' ', mj.nom, ' ', mj.post_nom) as 'membre'

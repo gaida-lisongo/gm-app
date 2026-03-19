@@ -510,8 +510,8 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                     stack: [
                         {
                             text: `Fait à Mbanza-Ngungu, le ___/___/20__`,
-                            style: { fontSize: 10, alignment: 'right' },
-                            margin: [0, 0, 0, 3]
+                            style: { fontSize: 10, alignment: 'center' },
+                            margin: [0, 0, 0, 20]
                         },
                         {
                             text: 'Le Secrétaire Général Académique',
@@ -530,7 +530,7 @@ export const generateBulletinsPDF = async (data: BulletinData) => {
                         // },
                         {
                             text: '',
-                            margin: [0, 100, 0, 5]
+                            margin: [0, 40, 0, 5]
                         },
                         {
                             text: 'LISONGO SEMETE Gabriel\nChef de Travaux',
