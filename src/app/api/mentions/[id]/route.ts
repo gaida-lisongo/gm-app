@@ -1,9 +1,13 @@
 import Mention from "@/models/Mention";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const id = parseInt(params.id);
+        const { id: rawId } = await params;
+        const id = parseInt(rawId);
         
         if (isNaN(id)) {
             return NextResponse.json({ error: 'ID invalide' }, { status: 400 });
@@ -22,9 +26,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const id = parseInt(params.id);
+        const { id: rawId } = await params;
+        const id = parseInt(rawId);
         const body = await request.json();
         
         if (isNaN(id)) {
@@ -44,9 +52,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const id = parseInt(params.id);
+        const { id: rawId } = await params;
+        const id = parseInt(rawId);
         
         if (isNaN(id)) {
             return NextResponse.json({ error: 'ID invalide' }, { status: 400 });

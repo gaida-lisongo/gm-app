@@ -28,6 +28,8 @@ export interface PromotionType {
     orientation: string | null;
     classe: string,
     systeme: string,
+    section_name?: string,
+    mention_name?: string,
     unites: UniteType[] | null,
     jurys: JuryType[] | null
 }
@@ -85,6 +87,23 @@ export interface NoteType {
 }
 
 class Promotion {
+    async allPromotions(): Promise<PromotionType[]> {
+        const result = await executeQuery(
+            `SELECT 
+                p.*,
+                CONCAT(n.intitule, ' ', s.designation) AS 'classe',
+                n.systeme,
+                s.designation AS 'section_name',
+                m.designation AS 'mention_name'
+            FROM promotion p
+            INNER JOIN niveau n ON n.id = p.id_niveau
+            INNER JOIN section s ON s.id = p.id_section
+            INNER JOIN mention m ON m.id = s.id_mention
+            ORDER BY m.designation ASC, s.designation ASC, n.intitule ASC`,
+        );
+        return result as PromotionType[];
+    }
+
     async all(sectionId: number) : Promise<PromotionType[]> {
         const result = await executeQuery(
             `SELECT p.*, CONCAT(n.intitule, ' ', s.designation) AS 'classe', n.systeme
@@ -95,6 +114,27 @@ class Promotion {
             [sectionId]
         );
         return result as PromotionType[];
+    }
+
+    async find(promotionId: number): Promise<PromotionType | null> {
+        const result = await executeQuery(
+            `SELECT 
+                p.*,
+                CONCAT(n.intitule, ' ', s.designation) AS 'classe',
+                n.systeme,
+                s.designation AS 'section_name',
+                m.designation AS 'mention_name'
+            FROM promotion p
+            INNER JOIN niveau n ON n.id = p.id_niveau
+            INNER JOIN section s ON s.id = p.id_section
+            INNER JOIN mention m ON m.id = s.id_mention
+            WHERE p.id = ?
+            LIMIT 1`,
+            [promotionId]
+        );
+
+        const rows = result as PromotionType[];
+        return rows[0] ?? null;
     }
 
     async unites(promotionId: number): Promise<UniteType[]> {
@@ -117,7 +157,7 @@ class Promotion {
         return result as MatiereType[];
     }
 
-    async matieresByPromotion(promotionId: number, anneeId: number = 8) {
+    async matieresByPromotion(promotionId: number, anneeId: number) {
         try {
             const req = await executeQuery(
                 `SELECT 
@@ -128,8 +168,10 @@ class Promotion {
                     unite.competences,
                     unite.objectifs,
                     matiere.id, 
-                    matiere.designation AS 'intitule', 
+                    matiere.designation,
                     matiere.credit, 
+                    matiere.id_unite,
+                    matiere.code,
                     charge_horaire.semestre, 
                     charge_horaire.statut
                 FROM matiere
@@ -157,8 +199,10 @@ class Promotion {
                 }
                 unite.matieres.push({
                     id: row.id,
-                    intitule: row.intitule,
+                    designation: row.designation,
                     credit: row.credit,
+                    id_unite: row.id_unite,
+                    code: row.code,
                     semestre: row.semestre,
                     statut: row.statut
                 });
@@ -187,9 +231,60 @@ class Promotion {
         return result as JuryType[];
     }
 
+    async juryByYear(promotionId: number, anneeId: number): Promise<JuryType[]> {
+        const result = await executeQuery(`
+            SELECT 
+                nj.*, 
+                CONCAT(a.debut, ' - ', a.fin) as 'annee_acad', 
+                s.designation as 'filiere', 
+                j.designation, 
+                CONCAT(pj.grade, ' ', pj.nom, ' ', pj.post_nom) as 'president', 
+                CONCAT(sj.grade, ' ', sj.nom, ' ', sj.post_nom) as 'secretaire', 
+                CONCAT(mj.grade, ' ', mj.nom, ' ', mj.post_nom) as 'membre'
+            FROM niveau_jury nj
+            INNER JOIN jury j ON j.id = nj.id_jury
+            INNER JOIN agent pj ON pj.id = j.id_president
+            INNER JOIN agent sj ON sj.id = j.id_secretaire
+            INNER JOIN agent mj ON mj.id = j.id_membre
+            INNER JOIN section s ON s.id = j.id_section
+            INNER JOIN annee a ON a.id = nj.id_annee
+            WHERE nj.id_niveau = ? AND nj.id_annee = ?`,
+            [promotionId, anneeId]
+        );
+        return result as JuryType[];
+    }
+
+    async years(promotionId: number): Promise<Array<{ id: number; annee_acad: string }>> {
+        const result = await executeQuery(
+            `SELECT DISTINCT 
+                a.id,
+                CONCAT(a.debut, ' - ', a.fin) AS 'annee_acad'
+            FROM niveau_jury nj
+            INNER JOIN annee a ON a.id = nj.id_annee
+            WHERE nj.id_niveau = ?
+            ORDER BY a.debut DESC, a.fin DESC`,
+            [promotionId]
+        );
+        return result as Array<{ id: number; annee_acad: string }>;
+    }
+
     async inscrits(promotionId: number, anneeId: number): Promise<InscritType[]>{
         const result = await executeQuery(
-            `SELECT ae.*, e.nom, e.post_nom, e.prenom, e.matricule, e.sexe, e.telephone, e.adresse, e.e_mail, e.lieu_naissance, e.date_naiss, CONCAT(a.debut, ' ', a.fin) as 'annee_acad', pe.id_annee_acad, pe.id_promotion
+            `SELECT 
+                ae.*, 
+                e.nom, 
+                e.post_nom, 
+                e.prenom, 
+                e.matricule, 
+                e.sexe, 
+                e.telephone, 
+                e.adresse, 
+                e.e_mail AS 'email', 
+                e.lieu_naissance, 
+                e.date_naiss AS 'date_naissance', 
+                CONCAT(a.debut, ' - ', a.fin) as 'annee_acad', 
+                pe.id_annee_acad, 
+                pe.id_promotion
             FROM promotion_etudiant pe
             INNER JOIN administratif_etudiant ae ON ae.id = pe.id_adminEtudiant
             INNER JOIN etudiant e ON e.id = ae.id_etudiant

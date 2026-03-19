@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useSidebar } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
@@ -14,21 +15,24 @@ export default function AdminLayout({
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const { isLoading, fetchMentions } = useMentionsStore();
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
 
-  // Dynamic class for main content margin based on sidebar state
-  const mainContentMargin = isMobileOpen
+  const mainContentMargin = isHomePage
+    ? "ml-0"
+    : isMobileOpen
     ? "ml-0"
     : isExpanded || isHovered
     ? "lg:ml-[290px]"
     : "lg:ml-[90px]";
 
-  // Fetch mentions on component mount
   useEffect(() => {
-    fetchMentions();
-  }, [fetchMentions]);
+    if (!isHomePage) {
+      fetchMentions();
+    }
+  }, [fetchMentions, isHomePage]);
 
-  // Show spinner while loading mentions
-  if (isLoading) {
+  if (!isHomePage && isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center space-y-4">
@@ -41,16 +45,12 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen xl:flex">
-      {/* Sidebar and Backdrop */}
-      <AppSidebar />
-      <Backdrop />
-      {/* Main Content Area */}
+      {!isHomePage && <AppSidebar />}
+      {!isHomePage && <Backdrop />}
       <div
         className={`flex-1 transition-all  duration-300 ease-in-out ${mainContentMargin}`}
       >
-        {/* Header */}
         <AppHeader />
-        {/* Page Content */}
         <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">{children}</div>
       </div>
     </div>

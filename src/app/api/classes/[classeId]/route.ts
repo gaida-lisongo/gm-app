@@ -19,8 +19,11 @@ export async function GET(request: NextRequest, { params } : { params : Promise<
         const promotions: PromotionType[] = [];
 
         for (const promotion of promotionsData) {
-            const unitesData = await Promotion.matieresByPromotion(promotion.id);
             const jurys = await Promotion.jurys(promotion.id);
+            const defaultYearId = jurys[0]?.id_annee;
+            const unitesData = defaultYearId
+                ? await Promotion.matieresByPromotion(promotion.id, defaultYearId)
+                : [];
 
             if(!unitesData || unitesData.length === 0){
                 promotions.push({

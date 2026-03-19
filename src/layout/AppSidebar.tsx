@@ -280,12 +280,8 @@ const AppSidebar: React.FC = () => {
             icon: <PageIcon />,
             subItems: [
               { 
-                name: "Bureau", 
-                path: "/bureau/" + s.id 
-              },
-              { 
                 name: "Promotions", 
-                path: "/promotions/" + s.id 
+                path: "/?section=" + s.id 
               },
             ]
           }
